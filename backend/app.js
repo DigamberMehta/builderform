@@ -13,9 +13,10 @@ const app = express();
 // Default middlewares
 app.use(express.json());
 app.use(cors({
-    origin: "http://localhost:5173", // Make sure this matches your React app's port
+    origin: ["http://localhost:5173", "https://builderform-ten.vercel.app"],
     credentials: true
 }));
+
 app.use(cookieParser());
 
 // Define Mongoose Schema and Model for Builder Applications
