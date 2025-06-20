@@ -4,20 +4,22 @@ import dotenv from "dotenv";
 import cors from "cors";
 import userRoutes from "./routes/user.route.js";
 import cookieParser from "cookie-parser";
-import mongoose from "mongoose"; // Import mongoose
+import mongoose from "mongoose";
 
 dotenv.config({});
 
 const app = express();
-
-// Default middlewares
 app.use(express.json());
+app.use(cookieParser());
+
+// ✅ Define allowed origins
 const allowedOrigins = [
   "http://localhost:5173",
   "https://builderform-ten.vercel.app"
 ];
 
-app.use(cors({
+// ✅ Define CORS options and apply globally
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -26,15 +28,17 @@ app.use(cors({
     }
   },
   credentials: true
-}));
+};
 
-// Handle preflight (OPTIONS) requests for all routes
-app.options("*", cors());
+app.use(cors(corsOptions));
 
+// ✅ Handle preflight OPTIONS requests using same CORS config
+app.options("*", cors(corsOptions));
 
-app.use(cookieParser());
+// ----------------------
+// Your builder schema and routes remain unchanged below
+// ----------------------
 
-// Define Mongoose Schema and Model for Builder Applications
 const builderSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   name: { type: String, required: true },
@@ -73,14 +77,12 @@ const builderSchema = new mongoose.Schema({
   salary: { type: Number, required: true, min: 0 },
   comments: { type: String, required: true },
   submission_date: { type: Date, default: Date.now }
-}, { timestamps: true }); // Add timestamps for creation and update dates
+}, { timestamps: true });
 
 const Builder = mongoose.model('Builder', builderSchema);
 
-// APIs
 app.use("/api/v1/user", userRoutes);
 
-// Form submission API route
 app.post('/api/submit-builder-form', async (req, res) => {
   try {
     const newBuilder = new Builder(req.body);
@@ -88,9 +90,9 @@ app.post('/api/submit-builder-form', async (req, res) => {
     res.status(201).json({ message: 'Builder application submitted successfully!', builder: newBuilder });
   } catch (err) {
     console.error('Error saving builder application:', err);
-    if (err.code === 11000) { // Duplicate key error (e.g., email unique constraint)
+    if (err.code === 11000) {
       res.status(409).json({ message: 'An application with this email already exists.' });
-    } else if (err.name === 'ValidationError') { // Mongoose validation error
+    } else if (err.name === 'ValidationError') {
       const errors = Object.keys(err.errors).map(key => err.errors[key].message);
       res.status(400).json({ message: 'Validation failed', errors });
     } else {
@@ -99,9 +101,8 @@ app.post('/api/submit-builder-form', async (req, res) => {
   }
 });
 
-// call the connectDB function
 connectDB();
 const PORT = 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
