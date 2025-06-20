@@ -24,6 +24,7 @@ const styles = {
     padding: "8px",
     marginTop: "5px",
     border: "1px solid black", // Added black border
+    cursor: "pointer", // Added cursor pointer for buttons
   },
   // --- END MODIFIED STYLE ---
   flagSelect: {
@@ -80,6 +81,11 @@ const styles = {
     marginTop: "2px",
     display: "block",
   },
+  // New style for disabled button
+  disabledButton: {
+    opacity: 0.7,
+    cursor: "not-allowed",
+  },
 };
 
 const texts = {
@@ -99,6 +105,8 @@ const texts = {
     salaryLabel: "Salary expectation (PLN zlotii paid daily in cash):",
     commentsLabel: "Any other relevant information you want to add:",
     submitButton: "Submit Information",
+    submittingButton: "Submitting...", // New text for submitting state
+    submittedButton: "Submitted!", // New text for submitted state
     bricklaying: "Bricklaying",
     plastering: "Plastering",
     plumbing: "Plumbing",
@@ -132,6 +140,7 @@ const texts = {
     typeMismatchTel: "Please enter a valid telephone number.",
     rangeUnderflow: "Please select a value that is no less than {min}.",
     rangeOverflow: "Please select a value that is no more than {max}.",
+    dateRangeError: "End date cannot be before start date.", // New error message
   },
   pl: {
     formTitle: "Praca budowlana w Londynie",
@@ -149,6 +158,8 @@ const texts = {
     salaryLabel: "Oczekiwana dzienna płaca w PLN (gotówka do ręki):",
     commentsLabel: "Dodatkowe informacje lub uwagi, które powinniśmy znać:",
     submitButton: "Wyślij informacje",
+    submittingButton: "Wysyłanie...", // New text for submitting state
+    submittedButton: "Wysłano!", // New text for submitted state
     bricklaying: "Murowanie",
     plastering: "Tynkowanie",
     plumbing: "Hydraulika",
@@ -182,6 +193,7 @@ const texts = {
     typeMismatchTel: "Proszę wpisać prawidłowy numer telefonu.",
     rangeUnderflow: "Wybierz wartość nie mniejszą niż {min}.",
     rangeOverflow: "Wybierz wartość nie większą niż {max}.",
+    dateRangeError: "Data końca nie może być wcześniejsza niż data rozpoczęcia.", // New error message
   },
 };
 
@@ -221,11 +233,20 @@ const BuilderForm = () => {
   });
   const [submitted, setSubmitted] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state for loading effect
+  const [submitButtonText, setSubmitButtonText] = useState(""); // New state for button text
 
   useEffect(() => {
     // Initial language setting
     setLang("pl");
+    // Set initial button text based on default language
+    setSubmitButtonText(texts["pl"].submitButton);
   }, []);
+
+  useEffect(() => {
+    // Update button text when language changes
+    setSubmitButtonText(texts[lang].submitButton);
+  }, [lang]);
 
   const switchLang = (newLang) => {
     setLang(newLang);
@@ -283,7 +304,6 @@ const BuilderForm = () => {
 
     // Phone number validation (basic type check, more robust regex might be needed)
     if (formData.phone && !/^\+?[0-9\s-()]{7,25}$/.test(formData.phone)) {
-      // Basic regex for phone numbers
       errors.phone = currentTexts.typeMismatchTel;
     }
 
@@ -324,11 +344,7 @@ const BuilderForm = () => {
       formData.london_available_to &&
       fromDate > toDate
     ) {
-      errors.london_available_to = "End date cannot be before start date."; // English only for now
-      if (lang === "pl") {
-        errors.london_available_to =
-          "Data końca nie może być wcześniejsza niż data rozpoczęcia.";
-      }
+      errors.london_available_to = currentTexts.dateRangeError;
     }
 
     setFormErrors(errors);
@@ -339,7 +355,6 @@ const BuilderForm = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      // Find the first input with an error and focus it
       const firstErrorField = document.querySelector(
         Object.keys(formErrors)
           .map((name) => `[name="${name}"]`)
@@ -351,19 +366,26 @@ const BuilderForm = () => {
       return;
     }
 
+    setIsSubmitting(true); // Set loading state to true
+    setSubmitButtonText(texts[lang].submittingButton); // Change button text to "Submitting..."
+
     try {
-      // Replace with your actual backend API endpoint
       const response = await axios.post(
         "https://builderform-dj1u.onrender.com/api/submit-builder-form",
         formData
       );
       console.log("Form submitted successfully:", response.data);
       setSubmitted(true);
-      // Optionally reset form here:
-      // setFormData({ /* initial state */ });
+      setSubmitButtonText(texts[lang].submittedButton); // Change button text to "Submitted!"
+
+      setTimeout(() => {
+        setSubmitButtonText(texts[lang].submitButton); // Revert button text after 3 seconds
+        setIsSubmitting(false); // Reset loading state
+        // Optionally reset form here if needed, but not in original request
+        // setFormData({ /* initial state */ });
+      }, 3000);
     } catch (error) {
       console.error("Error submitting form:", error);
-      // Handle error (e.g., display an error message to the user)
       let errorMessage =
         "There was an error submitting your form. Please try again.";
       if (
@@ -374,6 +396,8 @@ const BuilderForm = () => {
         errorMessage = error.response.data.message;
       }
       alert(errorMessage);
+      setIsSubmitting(false); // Reset loading state on error
+      setSubmitButtonText(texts[lang].submitButton); // Revert button text on error
     }
   };
 
@@ -398,7 +422,6 @@ const BuilderForm = () => {
         </div>
         <h1 style={styles.h1}>{texts[lang].formTitle}</h1>
         <div style={styles.formContainerFlex}>
-          {/* Apply the new formStyle */}
           <form onSubmit={handleSubmit} style={styles.formStyle}>
             <label htmlFor="email" style={styles.label}>
               {texts[lang].emailLabel}
@@ -411,6 +434,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.email && (
               <span style={styles.errorText}>{formErrors.email}</span>
@@ -425,6 +449,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.name && (
               <span style={styles.errorText}>{formErrors.name}</span>
@@ -442,6 +467,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.age && (
               <span style={styles.errorText}>{formErrors.age}</span>
@@ -459,6 +485,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.experience_years && (
               <span style={styles.errorText}>
@@ -475,6 +502,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.address && (
               <span style={styles.errorText}>{formErrors.address}</span>
@@ -490,6 +518,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.phone && (
               <span style={styles.errorText}>{formErrors.phone}</span>
@@ -504,11 +533,11 @@ const BuilderForm = () => {
               value={formData.whatsapp}
               onChange={handleChange}
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.whatsapp && (
               <span style={styles.errorText}>{formErrors.whatsapp}</span>
             )}{" "}
-            {/* Display if whatsapp has error */}
             <label htmlFor="english_level" style={styles.label}>
               {texts[lang].englishLabel}
             </label>
@@ -518,6 +547,7 @@ const BuilderForm = () => {
               value={formData.english_level}
               onChange={handleChange}
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             >
               <option value="none">{texts[lang].english_none}</option>
               <option value="can_understand_a_bit">
@@ -540,6 +570,7 @@ const BuilderForm = () => {
               value={formData.alcohol}
               onChange={handleChange}
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             >
               <option value="none">{texts[lang].alcohol_none}</option>
               <option value="yes_but_not_during_work">
@@ -567,6 +598,7 @@ const BuilderForm = () => {
                 onChange={handleChange}
                 required
                 style={styles.dateRangeInput}
+                disabled={isSubmitting} // Disable during submission
               />
               {formErrors.london_available_from && (
                 <span style={styles.errorText}>
@@ -581,6 +613,7 @@ const BuilderForm = () => {
                 onChange={handleChange}
                 required
                 style={styles.dateRangeInput}
+                disabled={isSubmitting} // Disable during submission
               />
               {formErrors.london_available_to && (
                 <span style={styles.errorText}>
@@ -606,6 +639,7 @@ const BuilderForm = () => {
                     value={formData.skills[skill]}
                     onChange={handleChange}
                     style={styles.skillRowSelect}
+                    disabled={isSubmitting} // Disable during submission
                   >
                     {[...Array(10).keys()].map((i) => (
                       <option key={i} value={i}>
@@ -628,6 +662,7 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             />
             {formErrors.salary && (
               <span style={styles.errorText}>{formErrors.salary}</span>
@@ -643,12 +678,20 @@ const BuilderForm = () => {
               onChange={handleChange}
               required
               style={styles.inputSelectButtonTextarea}
+              disabled={isSubmitting} // Disable during submission
             ></textarea>
             {formErrors.comments && (
               <span style={styles.errorText}>{formErrors.comments}</span>
             )}
-            <button type="submit" style={styles.inputSelectButtonTextarea}>
-              {texts[lang].submitButton}
+            <button
+              type="submit"
+              style={{
+                ...styles.inputSelectButtonTextarea,
+                ...(isSubmitting ? styles.disabledButton : {}), // Apply disabled style when submitting
+              }}
+              disabled={isSubmitting} // Disable the button while submitting
+            >
+              {submitButtonText}
             </button>
           </form>
           <div id="infoText" style={styles.infoText}>
@@ -663,7 +706,6 @@ const BuilderForm = () => {
             style={{ ...styles.confirmation, display: "block" }}
           >
             {" "}
-            {/* Override display to 'block' when submitted */}
             {texts[lang].confirmation}
           </div>
         )}
