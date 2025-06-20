@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect("mongodb+srv://digambermehta2603:t5ElwXKSrbynj2K5@cluster0.ctzr3gx.mongodb.net/userformdeta");
+        const conn = await mongoose.connect("mongodb+srv://disposable01121:1QImwIq7m14Cr7Cc@cluster0.wrtq25z.mongodb.net/builderformdata");
         console.log(`MongoDB Connected`);
     } catch (error) {
         console.error(`Error: ${error.message}`);
