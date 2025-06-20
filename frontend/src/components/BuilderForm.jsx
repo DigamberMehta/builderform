@@ -422,7 +422,8 @@ const BuilderForm = () => {
         </div>
         <h1 style={styles.h1}>{texts[lang].formTitle}</h1>
         <div style={styles.formContainerFlex}>
-          <form onSubmit={handleSubmit} style={styles.formStyle}>
+          {/* THE ONLY CHANGE IS HERE: Added noValidate to the form */}
+          <form onSubmit={handleSubmit} style={styles.formStyle} noValidate>
             <label htmlFor="email" style={styles.label}>
               {texts[lang].emailLabel}
             </label>
